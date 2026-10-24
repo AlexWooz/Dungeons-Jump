@@ -14,7 +14,8 @@ $paths = @(
     'UE4Project\Content\Mods\Jump',
     # Only our loader levels: other mods keep theirs in the same folders.
     'UE4Project\Content\BPLoader\InGame\JMP_Ingame.umap',
-    'UE4Project\Content\BPLoader\Lobby\JMP_Lobby.umap'
+    'UE4Project\Content\BPLoader\Lobby\JMP_Lobby.umap',
+    'UE4Project\Content\BPLoader\Menu\JMP_Menu.umap'
 )
 
 foreach ($p in $paths) {

@@ -64,6 +64,12 @@ L("K2Node_Event_0.then", "new:Dly.execute")
 chain("new:Dly", "new:SetPC", "new:EI", "new:CW", "new:SetDbg", "new:ATV", "new:Rem", "new:Add", "new:AddChat", "new:SetRemap")
 L("new:GIS.ReturnValue", "new:AddChat.self"); L("new:MkChat.InputActionKeyMapping", "new:AddChat.KeyMapping")
 S("new:MkChat.ActionName", "QuickActions"); S("new:MkChat.Key", "Gamepad_DPad_Left")
+# No rebuild: InputSettings.ForceRebuildKeymaps resets every PlayerInput to the ini defaults, which drops the
+# controller bindings the game adds at runtime (only the left stick and our LT worked until a mouse click).
+# The edits live on the InputSettings CDO for the whole session and are picked up by the game's own
+# rebuilds; the JMP_Menu loader level makes them before the first camp or mission loads.
+for n in ("Rem", "Add", "AddChat"):
+    S("new:%s.bForceRebuildKeymaps" % n, "false")
 L("new:GPC.ReturnValue", "new:SetPC.PC"); L("new:GetPC1.PC", "new:EI.PlayerController")
 S("new:CW.Class", "/Game/Mods/Jump/W_JumpDebug.W_JumpDebug_C"); L("new:GetPC1.PC", "new:CW.OwningPlayer")
 L("new:CW.ReturnValue", "new:SetDbg.Dbg"); L("new:SetDbg.Output_Get", "new:ATV.self")
@@ -75,7 +81,9 @@ S("new:MkNew.ActionName", "DodgeForward"); S("new:MkNew.Key", "R")
 
 # --- Space (ground only): take-off speed from the game's real gravity for JUMP_HEIGHT,
 #     then Jump() if CanJump, else LaunchCharacter with the same speed. Release: StopJumping.
-node("KSpace", "/Script/BlueprintGraph.K2Node_InputKey", "InputKey=SpaceBar", "bConsumeInput=False")
+# Consumed: the game re-adds Space -> DodgeForward at runtime (like its pad bindings), so RemoveActionMapping
+# alone can't free it, and an unconsumed press rolled instead of jumping. Space no longer interacts either.
+node("KSpace", "/Script/BlueprintGraph.K2Node_InputKey", "InputKey=SpaceBar", "bConsumeInput=True")
 fn("GPCh", GS, "GetPlayerCharacter", pure=True); vset("SetChar", "Char"); vget("GetChar1", "Char")
 xget("GCM1", CH, "CharacterMovement"); fn("OnG1", NMC, "IsMovingOnGround", pure=True, const=True)
 branch("BrG"); vset("SetLP0", "LastPath")

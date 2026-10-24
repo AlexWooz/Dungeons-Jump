@@ -17,7 +17,8 @@ $stage = Join-Path $PSScriptRoot '..\build\Dungeons'
 $include = @(
     'Mods\Jump',
     'BPLoader\InGame\JMP_Ingame.*',
-    'BPLoader\Lobby\JMP_Lobby.*'
+    'BPLoader\Lobby\JMP_Lobby.*',
+    'BPLoader\Menu\JMP_Menu.*'
 )
 
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
