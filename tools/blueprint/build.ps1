@@ -24,6 +24,7 @@ addvar Dbg object:/Game/Mods/Jump/W_JumpDebug.W_JumpDebug_C
 addvar Jumps int
 addvar Launches int
 addvar LastPath text
+addvar LastKey text
 addvar Remap text
 addvar GroundZ float
 addvar Peak float

@@ -2,7 +2,9 @@
 
 A Blueprint mod for **Minecraft Dungeons** (Steam, v1.17.0.0, UE 4.22) that lets the hero jump, with the Minecraft Dungeons II keyboard layout: **Space** jumps about 2.5 blocks high and the forward roll moves from Space to **R**. The normal dodge stays on Mouse 4.
 
-**Status:** probe build, tested in camp on keyboard and mouse. It shows a debug readout at all times, and there's no gamepad binding yet. See [docs/TECHNICAL.md](docs/TECHNICAL.md).
+On controller, **LT** jumps. LT normally opens the quick-chat wheel (online only), so the wheel moves to **D-pad Left**.
+
+**Status:** probe build, tested in camp on keyboard, mouse and controller. It shows a debug readout at all times, and the chat-wheel move hasn't been tested online yet. See [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
 ## Install
 1. Install Dungeons Blueprint Loader 1.0 (`Blueprint-Loader.pak`) in your `~mods` folder.

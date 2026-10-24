@@ -13,14 +13,15 @@ How the Jump mod works and what we learned about jumping in Minecraft Dungeons (
 **BeginPlay**
 1. `Delay 0.5`, `PC = GetPlayerController(0)`, `EnableInput(PC)`, then create `W_JumpDebug` and add it to the viewport.
 2. **Roll remap:** `GetInputSettings → RemoveActionMapping(DodgeForward, SpaceBar)`, then `AddActionMapping(DodgeForward, R)`, both with `bForceRebuildKeymaps = true`. The change is in memory only (never saved to the ini), and doing it again on the next level does nothing new: the remove finds nothing, and the add skips duplicates. Nothing touches InputSettings in EndPlay (ThirdPersonCam crashed on quit doing that).
+3. **Chat wheel:** `AddActionMapping(QuickActions, Gamepad_DPad_Left)`, because LT is taken for jumping.
 
-**Space pressed** (key event, `bConsumeInput = false`, so Space still triggers Interact):
+**Jump keys:** Space (`bConsumeInput = false`, so it still triggers Interact) and LT (`bConsumeInput = true`, so it no longer opens the chat wheel). Each key stores its name in `LastKey`, then both run the same path:
 1. `Char = GetPlayerCharacter(0)`. If `CharacterMovement.IsMovingOnGround` is false, ignore the press, so you can't chain jumps in the air.
 2. `v = sqrt(2 × |CharacterMovement.GetGravityZ()| × JUMP_HEIGHT)`, with `JUMP_HEIGHT = 250`. `CharacterMovement.JumpZVelocity = v`.
 3. Store `GroundZ = Peak =` actor Z, for the readout.
 4. If `Char.CanJump()`, call `Char.Jump()`. Otherwise call `Char.LaunchCharacter((0, 0, v), XYOverride = false, ZOverride = true)`. Both give the same height.
 
-**Space released** → `StopJumping`.
+**Key released** → `StopJumping`.
 
 **Tick** → `Peak = max(Peak, actor Z)`, then the readout: CanJump, NavAgent `bCanJump`, on ground / falling / movement mode, JumpZVelocity, GravityZ, GravityScale, height, vertical speed, last jump peak (`Peak − GroundZ`), which path the last press took, jump/launch counters, and the remap status.
 
@@ -31,13 +32,18 @@ How the Jump mod works and what we learned about jumping in Minecraft Dungeons (
 - **`CanJump()` is sometimes false while standing on the ground**, with the same readout values as when it's true. The cause is unknown: maybe an override in `BP_PlayerCharacter` (not exported) or jump-count state. The `LaunchCharacter` fallback hides it.
 - **Gravity is about 5× standard.** `GetGravityZ()` ≈ −5000 (UE default −980) with `GravityScale = 1`, so the world or movement component has its own gravity. The default `JumpZVelocity = 1000` only gave about 100 units (≈1 block), and a 600 launch about 35. That's why the take-off speed is computed from the live gravity.
 - **Scale:** a 200-unit peak looked like exactly 2 blocks in camp, so 1 block ≈ 100 units. 250 (2.5 blocks) felt best, close to Minecraft Dungeons II's jump.
+- **Controller bindings are built at runtime.** `DefaultInput.ini` has no RB mapping for the forward roll, yet RB rolls, and `QuickActions` (the quick-chat wheel, LT) is listed with `Key=None`. The game assigns these at runtime, so `RemoveActionMapping` can't take them away. **Consuming the key works instead:** an actor key event with `bConsumeInput = true` (our input component sits above `BP_PlayerController`'s) stopped RB from rolling while it jumped. `InputSettings.AddActionMapping` still adds extra keys to those actions.
+- **A is melee and can't be moved.** In Dungeons 1, A = melee / interact / elytra dive. There's no named action for melee, so Minecraft Dungeons II's A = Jump, X = Melee layout isn't possible. The free buttons in gameplay are LT (chat wheel, online only), L3 and D-pad Left. D-pad Right is Emote, Up is inventory, Down is the map.
+- **The chat wheel only opens online.** `BP_PlayerController.CanOpenChatWheel` checks `IsInOnlineGame` / `IsOnlineSession`, so LT does nothing in single player, which made it the natural jump button.
 - **Attacking mid-air works.** Melee and ranged attacks play during a jump. Most weapons have no air animation, so it looks odd, but the hammer's swing looks like a slam.
 
 ## Testing so far
 Camp, keyboard and mouse: jumping, jump height (200 measured, then raised to 250), attacking mid-air, and the roll remap (R rolls, Space no longer does).
+Camp, controller: RB jumped and stopped rolling when consumed (an earlier probe); LT jumps.
+
+**Untested:** the chat wheel on D-pad Left and its removal from LT. Both only show up in an online game.
 
 ## Not done / ideas
-- **Gamepad:** Minecraft Dungeons II uses **A = Jump** and **LB = Forward Dodge**. In Dungeons 1's `DefaultInput.ini`, A (`Gamepad_FaceButton_Bottom`) is `MenuSelect`, `Skip` and `Use Ender Pearl 3`, and LB is `GamepadLeftShoulder`. The game also reads some gamepad buttons natively, so check what A and LB do in gameplay first.
 - **Release build:** hide the debug readout by default (or put it on a key), and rename `BP_JumpProbe`.
 - **Jump attacks:** detect an attack while falling (or a hammer swing in particular) and turn it into a slam, e.g. a downward launch plus an area effect on landing.
 - Test in missions (stairs, ledges, water, terrain the camera fades) and in multiplayer (the jump only runs on the local player's pawn).

@@ -57,14 +57,19 @@ vset("SetDbg", "Dbg"); fn("ATV", "/Script/UMG.UserWidget", "AddToViewport")
 fn("GIS", INS, "GetInputSettings", pure=True)
 mk("MkOld", "/Script/Engine.InputActionKeyMapping"); mk("MkNew", "/Script/Engine.InputActionKeyMapping")
 fn("Rem", INS, "RemoveActionMapping"); fn("Add", INS, "AddActionMapping"); vset("SetRemap", "Remap")
+# Quick-chat wheel (QuickActions; LT is assigned at runtime, the ini has Key=None) also on D-pad Left,
+# since LT is consumed for jumping below.
+mk("MkChat", "/Script/Engine.InputActionKeyMapping"); fn("AddChat", INS, "AddActionMapping")
 L("K2Node_Event_0.then", "new:Dly.execute")
-chain("new:Dly", "new:SetPC", "new:EI", "new:CW", "new:SetDbg", "new:ATV", "new:Rem", "new:Add", "new:SetRemap")
+chain("new:Dly", "new:SetPC", "new:EI", "new:CW", "new:SetDbg", "new:ATV", "new:Rem", "new:Add", "new:AddChat", "new:SetRemap")
+L("new:GIS.ReturnValue", "new:AddChat.self"); L("new:MkChat.InputActionKeyMapping", "new:AddChat.KeyMapping")
+S("new:MkChat.ActionName", "QuickActions"); S("new:MkChat.Key", "Gamepad_DPad_Left")
 L("new:GPC.ReturnValue", "new:SetPC.PC"); L("new:GetPC1.PC", "new:EI.PlayerController")
 S("new:CW.Class", "/Game/Mods/Jump/W_JumpDebug.W_JumpDebug_C"); L("new:GetPC1.PC", "new:CW.OwningPlayer")
 L("new:CW.ReturnValue", "new:SetDbg.Dbg"); L("new:SetDbg.Output_Get", "new:ATV.self")
 L("new:GIS.ReturnValue", "new:Rem.self"); L("new:MkOld.InputActionKeyMapping", "new:Rem.KeyMapping")
 L("new:GIS.ReturnValue", "new:Add.self"); L("new:MkNew.InputActionKeyMapping", "new:Add.KeyMapping")
-S("new:SetRemap.Remap", "DodgeForward moved Space -> R")
+S("new:SetRemap.Remap", "roll Space -> R, chat wheel + D-pad Left")
 S("new:MkOld.ActionName", "DodgeForward"); S("new:MkOld.Key", "SpaceBar")
 S("new:MkNew.ActionName", "DodgeForward"); S("new:MkNew.Key", "R")
 
@@ -85,7 +90,18 @@ fn("Lch", CH, "LaunchCharacter"); fn("MkV", KML, "MakeVector", pure=True)
 vset("SetLP2", "LastPath"); vget("GetLa", "Launches"); fn("AddLa", KML, "Add_IntInt", pure=True); vset("SetLa", "Launches")
 fn("StopJ", CH, "StopJumping"); fn("GPCh3", GS, "GetPlayerCharacter", pure=True)
 
-L("new:KSpace.Pressed", "new:SetChar.execute"); L("new:GPCh.ReturnValue", "new:SetChar.Char")
+# Each jump key records its name, then joins the same path. LT is consumed so it no longer opens the
+# quick-chat wheel (online only; moved to D-pad Left above). Consuming works on the game's runtime pad
+# bindings: consuming RB blocked the forward roll in an earlier probe.
+JUMP_KEYS = [("KSpace", None, "Space"), ("KPadLT", "Gamepad_LeftTrigger", "LT")]
+for name, key, label in JUMP_KEYS:
+    if key:
+        node(name, "/Script/BlueprintGraph.K2Node_InputKey", "InputKey=" + key, "bConsumeInput=True")
+    vset("SetKey" + name, "LastKey")
+    L("new:%s.Pressed" % name, "new:SetKey%s.execute" % name); S("new:SetKey%s.LastKey" % name, label)
+    L("new:SetKey%s.then" % name, "new:SetChar.execute")
+    L("new:%s.Released" % name, "new:StopJ.execute")
+L("new:GPCh.ReturnValue", "new:SetChar.Char")
 L("new:GetChar1.Char", "new:GCM1.self"); L("new:GCM1.CharacterMovement", "new:OnG1.self"); L("new:OnG1.ReturnValue", "new:BrG.Condition")
 chain("new:SetChar", "new:BrG")
 L("new:BrG.else", "new:SetLP0.execute"); S("new:SetLP0.LastPath", "ignored (already in the air)")
@@ -103,7 +119,7 @@ L("new:Br.else", "new:Lch.execute"); L("new:GetChar1.Char", "new:Lch.self")
 L("new:Sq1.ReturnValue", "new:MkV.Z"); L("new:MkV.ReturnValue", "new:Lch.LaunchVelocity"); S("new:Lch.bZOverride", "true")
 chain("new:Lch", "new:SetLP2", "new:SetLa"); S("new:SetLP2.LastPath", "LaunchCharacter (CanJump was false)")
 L("new:GetLa.Launches", "new:AddLa.A"); S("new:AddLa.B", "1"); L("new:AddLa.ReturnValue", "new:SetLa.Launches")
-L("new:KSpace.Released", "new:StopJ.execute"); L("new:GPCh3.ReturnValue", "new:StopJ.self")
+L("new:GPCh3.ReturnValue", "new:StopJ.self")
 
 # --- Tick: track the peak of the current jump, then the readout
 vget("GetDbg", "Dbg"); isvalid("IV")
@@ -119,7 +135,7 @@ fn("Vel", ACT, "GetVelocity", pure=True, const=True); fn("BrVel", KML, "BreakVec
 vget("GetPk", "Peak"); fn("MaxPk", KML, "FMax", pure=True); vset("SetPk", "Peak")
 vget("GetPk2", "Peak"); vget("GetGZ", "GroundZ"); fn("SubPk", KML, "Subtract_FloatFloat", pure=True)
 for n in ("T1", "T2", "T3", "T4"): fn(n, KTL, "Conv_BoolToText", pure=True)
-vget("GetLP", "LastPath"); vget("GetJ2", "Jumps"); vget("GetLa2", "Launches"); vget("GetRm", "Remap")
+vget("GetLP", "LastPath"); vget("GetLK", "LastKey"); vget("GetJ2", "Jumps"); vget("GetLa2", "Launches"); vget("GetRm", "Remap")
 node("Fmt", "/Script/BlueprintGraph.K2Node_FormatText")
 xget("DT", "/Game/Mods/Jump/W_JumpDebug.W_JumpDebug_C", "DebugText", "WidgetBlueprintGeneratedClass")
 fn("ST", "/Script/UMG.TextBlock", "SetText")
@@ -127,7 +143,7 @@ L("K2Node_Event_2.then", "new:SetPk.execute"); L("new:SetPk.then", "new:IV.exec"
 L("new:GetPk.Peak", "new:MaxPk.A"); L("new:BrLoc.Z", "new:MaxPk.B"); L("new:MaxPk.ReturnValue", "new:SetPk.Peak")
 L("new:GetDbg.Dbg", "new:IV.InputObject")
 L("new:IV.Is Valid", "new:ST.execute"); L("new:GetDbg.Dbg", "new:DT.self"); L("new:DT.DebugText", "new:ST.self")
-S("new:Fmt.Format", r"JUMP PROBE   Space = jump (target %d high), R = forward roll\nCanJump {CJ}   NavAgent bCanJump {NJ}\nOnGround {G}   Falling {F}   MovementMode {M}\nJumpZVelocity {Z}   GravityZ {GZ}   GravityScale {GS}\nHeight {H}   VelocityZ {VZ}   Last jump peak {PK}\nLast press: {L}   Jumps {J}   Launches {LA}\nRemap: {R}" % JUMP_HEIGHT)
+S("new:Fmt.Format", r"JUMP PROBE   Space / LT = jump (target %d high), R = forward roll\nCanJump {CJ}   NavAgent bCanJump {NJ}\nOnGround {G}   Falling {F}   MovementMode {M}\nJumpZVelocity {Z}   GravityZ {GZ}   GravityScale {GS}\nHeight {H}   VelocityZ {VZ}   Last jump peak {PK}\nLast press: {K} -> {L}   Jumps {J}   Launches {LA}\nRemap: {R}" % JUMP_HEIGHT)
 L("new:Fmt.Result", "new:ST.InText")
 L("new:GPCh2.ReturnValue", "new:GCM.self"); L("new:GPCh2.ReturnValue", "new:CanJ2.self"); L("new:GPCh2.ReturnValue", "new:Loc.self"); L("new:GPCh2.ReturnValue", "new:Vel.self")
 L("new:CanJ2.ReturnValue", "new:T1.InBool"); L("new:T1.ReturnValue", "new:Fmt.CJ")
@@ -141,7 +157,7 @@ L("new:GCM.CharacterMovement", "new:GGZ.self"); L("new:GGZ.ReturnValue", "new:Fm
 L("new:Loc.ReturnValue", "new:BrLoc.InVec"); L("new:BrLoc.Z", "new:Fmt.H")
 L("new:Vel.ReturnValue", "new:BrVel.InVec"); L("new:BrVel.Z", "new:Fmt.VZ")
 L("new:GetPk2.Peak", "new:SubPk.A"); L("new:GetGZ.GroundZ", "new:SubPk.B"); L("new:SubPk.ReturnValue", "new:Fmt.PK")
-L("new:GetLP.LastPath", "new:Fmt.L"); L("new:GetJ2.Jumps", "new:Fmt.J"); L("new:GetLa2.Launches", "new:Fmt.LA"); L("new:GetRm.Remap", "new:Fmt.R")
+L("new:GetLP.LastPath", "new:Fmt.L"); L("new:GetLK.LastKey", "new:Fmt.K");L("new:GetJ2.Jumps", "new:Fmt.J"); L("new:GetLa2.Launches", "new:Fmt.LA"); L("new:GetRm.Remap", "new:Fmt.R")
 
 open(os.path.join(out, "probe.paste"), "w", encoding="utf-8").write("\n".join(nodes) + "\n")
 open(os.path.join(out, "probe.ops"), "w", encoding="utf-8").write("\n".join(ops) + "\n")
