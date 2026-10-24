@@ -4,6 +4,7 @@ import sys, os, re
 out = sys.argv[1]
 G = dict(re.findall(r"added variable (\w+) \([^)]*\) guid=(\w+)", open(sys.argv[2], encoding="utf-8", errors="ignore").read()))
 JUMP_HEIGHT = 250.0  # unreal units, about 2.5 blocks (200 measured as 2 blocks)
+DEBUG = False        # True shows the W_JumpDebug readout (probe builds)
 
 nodes = []; pos = [0]
 def node(name, cls, *props):
@@ -61,7 +62,10 @@ fn("Rem", INS, "RemoveActionMapping"); fn("Add", INS, "AddActionMapping"); vset(
 # since LT is consumed for jumping below.
 mk("MkChat", "/Script/Engine.InputActionKeyMapping"); fn("AddChat", INS, "AddActionMapping")
 L("K2Node_Event_0.then", "new:Dly.execute")
-chain("new:Dly", "new:SetPC", "new:EI", "new:CW", "new:SetDbg", "new:ATV", "new:Rem", "new:Add", "new:AddChat", "new:SetRemap")
+if DEBUG:
+    chain("new:Dly", "new:SetPC", "new:EI", "new:CW", "new:SetDbg", "new:ATV", "new:Rem", "new:Add", "new:AddChat", "new:SetRemap")
+else:  # no widget: Dbg stays invalid, so Tick skips the readout
+    chain("new:Dly", "new:SetPC", "new:EI", "new:Rem", "new:Add", "new:AddChat", "new:SetRemap")
 L("new:GIS.ReturnValue", "new:AddChat.self"); L("new:MkChat.InputActionKeyMapping", "new:AddChat.KeyMapping")
 S("new:MkChat.ActionName", "QuickActions"); S("new:MkChat.Key", "Gamepad_DPad_Left")
 # No rebuild: InputSettings.ForceRebuildKeymaps resets every PlayerInput to the ini defaults, which drops the

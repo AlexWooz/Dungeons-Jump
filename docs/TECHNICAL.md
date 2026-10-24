@@ -11,7 +11,7 @@ How the Jump mod works and what we learned about jumping in Minecraft Dungeons (
 
 ## BP_JumpProbe
 **BeginPlay**
-1. `Delay 0.5`, `PC = GetPlayerController(0)`, `EnableInput(PC)`, then create `W_JumpDebug` and add it to the viewport.
+1. `Delay 0.5`, `PC = GetPlayerController(0)`, `EnableInput(PC)`. Only with `DEBUG = True` in `gen.py` (off in releases): create `W_JumpDebug` and add it to the viewport.
 2. **Roll remap:** `GetInputSettings → RemoveActionMapping(DodgeForward, SpaceBar)`, then `AddActionMapping(DodgeForward, R)`.
 3. **Chat wheel:** `AddActionMapping(QuickActions, Gamepad_DPad_Left)`, because LT is taken for jumping.
 
@@ -25,7 +25,7 @@ All three use `bForceRebuildKeymaps = false` (see the findings for why). The cha
 
 **Key released** → `StopJumping`.
 
-**Tick** → `Peak = max(Peak, actor Z)`, then the readout: CanJump, NavAgent `bCanJump`, on ground / falling / movement mode, JumpZVelocity, GravityZ, GravityScale, height, vertical speed, last jump peak (`Peak − GroundZ`), which path the last press took, jump/launch counters, and the remap status.
+**Tick** → `Peak = max(Peak, actor Z)`, then, if `Dbg` is valid, the readout: CanJump, NavAgent `bCanJump`, on ground / falling / movement mode, JumpZVelocity, GravityZ, GravityScale, height, vertical speed, last jump peak (`Peak − GroundZ`), which path the last press took, jump/launch counters, and the remap status.
 
 ## Game internals (findings)
 - **The hero is a normal `ACharacter`.** `BP_AlexCharacter` → `BP_PlayerCharacter` → native `DungeonsCharacter`, with a `CapsuleComponent` root and a `PlayerCharacterMovementComponent` (`CharMoveComp`). So `Jump`, `StopJumping`, `CanJump`, `LaunchCharacter` and the `CharacterMovement` properties all work from Blueprint with no stub.
@@ -48,7 +48,7 @@ Current build, from a fresh start: Space jumps, R rolls, controller works in cam
 **Untested:** the chat wheel on D-pad Left and its removal from LT. Both only show up in an online game.
 
 ## Not done / ideas
-- **Release build:** hide the debug readout by default (or put it on a key), and rename `BP_JumpProbe`.
+- Rename `BP_JumpProbe`, and drop the probe-only pieces (readout, counters).
 - **Jump attacks:** detect an attack while falling (or a hammer swing in particular) and turn it into a slam, e.g. a downward launch plus an area effect on landing.
 - Test in missions (stairs, ledges, water, terrain the camera fades) and in multiplayer (the jump only runs on the local player's pawn).
 - Space no longer interacts or skips (it's consumed). Check that cutscenes and dialogue can still be skipped some other way.
